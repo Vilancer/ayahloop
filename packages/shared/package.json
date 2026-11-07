@@ -1,0 +1,19 @@
+{
+  "name": "@ayahloop/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The shared contract for AyahLoop: enums, STEP_TRANSITIONS state machine, PERMISSIONS registry, navigation items, and zod schemas.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./database": "./src/types/database.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

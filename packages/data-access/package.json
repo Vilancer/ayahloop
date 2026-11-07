@@ -1,0 +1,19 @@
+{
+  "name": "@ayahloop/data-access",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Platform-neutral API access for web and mobile: typed fetch client (responses validated with @ayahloop/shared) and TanStack Query key factory.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ayahloop/shared": "workspace:*",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

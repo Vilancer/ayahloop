@@ -1,0 +1,15 @@
+node_modules/
+.turbo/
+.next/
+.expo/
+.expo-export/
+dist/
+coverage/
+.mobile-device/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+apps/mobile/expo-env.d.ts
+*.tsbuildinfo

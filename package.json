@@ -1,0 +1,41 @@
+{
+  "name": "ayahloop",
+  "private": true,
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "supabase": "supabase",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > packages/shared/src/types/database.ts",
+    "tokens:generate": "tsx packages/design-tokens/scripts/generate.ts",
+    "verify:tokens": "tsx scripts/verify-tokens.ts",
+    "verify:i18n": "tsx scripts/verify-i18n.ts",
+    "verify:permissions": "tsx scripts/verify-permissions.ts",
+    "verify:transitions": "tsx scripts/verify-transitions.ts",
+    "verify:data-access": "tsx scripts/verify-data-access.ts",
+    "verify:migration-replay": "bash scripts/verify-migration-replay.sh",
+    "verify:mobile": "pnpm --filter mobile run typecheck && pnpm --filter mobile run lint && pnpm --filter mobile run test && pnpm --filter mobile run export",
+    "mobile:start": "pnpm --filter mobile start",
+    "mobile:ios": "pnpm --filter mobile ios",
+    "mobile:android": "pnpm --filter mobile android",
+    "mobile:device": "bash scripts/mobile-device.sh",
+    "mobile:screenshots": "bash scripts/publish-screenshots.sh"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "@types/node": "^22",
+    "supabase": "^2.116.0",
+    "tsx": "^4.23.13",
+    "turbo": "^2.10.12",
+    "typescript": "^5"
+  }
+}

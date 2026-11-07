@@ -1,0 +1,1 @@
+-- AyahLoop deterministic seed placeholder (populated when migrations land).

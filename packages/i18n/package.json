@@ -1,0 +1,15 @@
+{
+  "name": "@ayahloop/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bilingual en + ar catalogs for AyahLoop, direction authority helpers, Latin digit normalization, and typed translator.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

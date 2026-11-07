@@ -1,0 +1,21 @@
+{
+  "name": "@ayahloop/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Canonical design tokens (The Caregiver palette, typography, spacing, radii, ergonomics, motion) and generated Tailwind v4 / NativeWind v4 adapters.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./web-theme.css": "./generated/web-theme.css",
+    "./tailwind-preset": "./generated/tailwind-preset.cjs",
+    "./nativewind": "./generated/nativewind-vars.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "generate": "tsx scripts/generate.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
+  }
+}
