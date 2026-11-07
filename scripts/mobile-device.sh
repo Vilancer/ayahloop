@@ -1,18 +1,36 @@
 #!/usr/bin/env bash
 # Drive the shared Android phone for the AyahLoop Expo mobile app — from ANY git
-# worktree, with exclusive flock on /tmp/ayahloop-mobile-device.lock.
+# worktree, with two agents working at once. See apps/mobile/CONVENTIONS.md
+# ("Device + screenshots") for the full workflow.
 #
 #   scripts/mobile-device.sh up [--web-port N] [--metro-port N] [--lan]
-#   scripts/mobile-device.sh status
-#   scripts/mobile-device.sh down
-#   scripts/mobile-device.sh with-device <cmd...>
-#   scripts/mobile-device.sh open
-#   scripts/mobile-device.sh tap <selector>
-#   scripts/mobile-device.sh type <selector> <text>
-#   scripts/mobile-device.sh wait-for <selector> [timeout-s]
-#   scripts/mobile-device.sh back | scroll-down | scroll-up
-#   scripts/mobile-device.sh screenshot <name>
-#   scripts/mobile-device.sh dump
+#                                                                 start supabase (if needed), web API, metro;
+#                                                                 --lan: for a phone on the Wi-Fi (an iPhone in
+#                                                                 Expo Go), advertise this machine's LAN address
+#   scripts/mobile-device.sh status                               what this worktree has running
+#   scripts/mobile-device.sh down                                 stop this worktree's web + metro
+#   scripts/mobile-device.sh with-device <cmd...>                 run <cmd> holding the device lock
+#   scripts/mobile-device.sh open                                 adb reverse + open this build in Expo Go
+#   scripts/mobile-device.sh sign-in [email] [password]           sign in as a seeded user (default learner@ayahloop.dev)
+#   scripts/mobile-device.sh sign-out                             sign out
+#   scripts/mobile-device.sh tap <selector>                       tap a node: id:<testID> | text:<text> | desc:<label>
+#   scripts/mobile-device.sh type <selector> <text>               focus a field and type into it
+#   scripts/mobile-device.sh wait-for <selector> [timeout-s]      wait until a node is on screen
+#   scripts/mobile-device.sh back | scroll-down | scroll-up       hardware back / swipe
+#   scripts/mobile-device.sh screenshot <name>                    PNG into .mobile-device/screenshots/<name>.png
+#   scripts/mobile-device.sh dump                                 print the on-screen nodes (id/text/desc)
+#
+# Ports are per worktree (saved in .mobile-device/env by `up`, reused by every
+# other subcommand). Supabase is shared across worktrees: one local stack on the
+# fixed 566xx ports serves every worktree, so never `pnpm db:reset` while another
+# agent is using the phone.
+#
+# EVERY device interaction takes an exclusive flock on $AYAHLOOP_DEVICE_LOCK
+# (default /tmp/ayahloop-mobile-device.lock). A single subcommand locks for
+# its own duration; `with-device` holds it across a whole sequence (open →
+# sign in → navigate → screenshots) so the other agent cannot swap the app in
+# between. Nested subcommands see AYAHLOOP_DEVICE_LOCK_HELD=1 and do not
+# re-lock.
 set -euo pipefail
 
 REPO="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
@@ -59,6 +77,11 @@ wait_http() {
   done
 }
 
+supabase_env() {
+  # `supabase status -o env` prints the well-known LOCAL keys (not secrets).
+  (cd "$REPO" && pnpm -s exec supabase status -o env 2>/dev/null) | sed -n 's/^\([A-Z_]*\)="\{0,1\}\([^"]*\)"\{0,1\}$/\1=\2/p'
+}
+
 cmd_up() {
   load_env
   local host=127.0.0.1
@@ -69,11 +92,22 @@ cmd_up() {
       --lan)
         host="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p')"
         [[ -n "$host" ]] || die "could not find this machine's LAN address"
+        log "LAN mode: the phone reaches this machine at $host (metro starts with --clear: the API address is baked into the bundle)"
         shift ;;
       *) die "unknown flag $1" ;;
     esac
   done
   printf 'WEB_PORT=%s\nMETRO_PORT=%s\n' "$WEB_PORT" "$METRO_PORT" >"$STATE/env"
+
+  if ! curl -fs -o /dev/null --max-time 5 "http://127.0.0.1:$SUPABASE_API_PORT/auth/v1/health"; then
+    log "starting local supabase (ports 566xx)…"
+    (cd "$REPO" && pnpm db:start) >"$STATE/logs/supabase.log" 2>&1 || die "supabase failed to start — see $STATE/logs/supabase.log"
+  fi
+  local env_lines anon service
+  env_lines="$(supabase_env)"
+  anon="$(sed -n 's/^ANON_KEY=//p' <<<"$env_lines")"
+  service="$(sed -n 's/^SERVICE_ROLE_KEY=//p' <<<"$env_lines")"
+  [[ -n "$anon" && -n "$service" ]] || die "could not read the local supabase keys (supabase status)"
 
   if [[ -f "$STATE/web.pid" ]] && kill -0 "$(cat "$STATE/web.pid")" 2>/dev/null; then
     log "web already running (pid $(cat "$STATE/web.pid"), port $WEB_PORT)"
@@ -82,6 +116,9 @@ cmd_up() {
     log "starting the web API on :$WEB_PORT…"
     (
       cd "$REPO/apps/web"
+      NEXT_PUBLIC_SUPABASE_URL="http://$host:$SUPABASE_API_PORT" \
+      NEXT_PUBLIC_SUPABASE_ANON_KEY="$anon" \
+      SUPABASE_SERVICE_ROLE_KEY="$service" \
       PUBLIC_BASE_URL="http://$host:$WEB_PORT" \
       setsid nohup npx next dev -p "$WEB_PORT" >"$STATE/logs/web.log" 2>&1 &
       echo $! >"$STATE/web.pid"
@@ -95,7 +132,11 @@ cmd_up() {
     log "starting metro on :$METRO_PORT…"
     (
       cd "$REPO/apps/mobile"
+      # 127.0.0.1 on the PHONE is this machine through `adb reverse` (see
+      # `open`), so neither the API nor the bundle needs a LAN address.
       EXPO_PUBLIC_API_URL="http://$host:$WEB_PORT" \
+      EXPO_PUBLIC_SUPABASE_URL="http://$host:$SUPABASE_API_PORT" \
+      EXPO_PUBLIC_SUPABASE_ANON_KEY="$anon" \
       REACT_NATIVE_PACKAGER_HOSTNAME="$host" \
       EXPO_NO_TELEMETRY=1 \
       setsid nohup npx expo start --port "$METRO_PORT" $([[ $host != 127.0.0.1 ]] && echo --clear) >"$STATE/logs/metro.log" 2>&1 &
@@ -107,6 +148,15 @@ cmd_up() {
   wait_http "http://127.0.0.1:$WEB_PORT/api/health" 240 || die "the web API did not come up — see $STATE/logs/web.log"
   log "waiting for metro…"
   wait_http "http://127.0.0.1:$METRO_PORT/status" 180 || die "metro did not come up — see $STATE/logs/metro.log"
+  log "warming the Android bundle (first build can take a minute)…"
+  local bundle
+  bundle="$(curl -fs --max-time 30 -H 'expo-platform: android' "http://127.0.0.1:$METRO_PORT" \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["launchAsset"]["url"])' 2>/dev/null || true)"
+  if [[ -n "$bundle" ]]; then
+    curl -fs -o /dev/null --max-time 900 "$bundle" || log "bundle warm-up failed — see $STATE/logs/metro.log"
+  else
+    log "could not read the manifest — see $STATE/logs/metro.log"
+  fi
   cmd_status
 }
 
@@ -134,9 +184,10 @@ cmd_down() {
   load_env
   stop_pid "$STATE/metro.pid"
   stop_pid "$STATE/web.pid"
+  # Only this worktree's reverse mappings; the shared supabase one stays.
   "${ADB[@]}" reverse --remove "tcp:$METRO_PORT" 2>/dev/null || true
   "${ADB[@]}" reverse --remove "tcp:$WEB_PORT" 2>/dev/null || true
-  log "stopped web + metro for $REPO"
+  log "stopped web + metro for $REPO (supabase left running — it is shared)"
 }
 
 ui_dump() {
@@ -204,9 +255,49 @@ cmd_open() {
   done
   "${ADB[@]}" shell input keyevent KEYCODE_WAKEUP
   "${ADB[@]}" shell wm dismiss-keyguard >/dev/null 2>&1 || true
+  # A fresh process: never screenshot the other agent's build by accident.
   "${ADB[@]}" shell am force-stop "$EXPO_GO"
   "${ADB[@]}" shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:$METRO_PORT" "$EXPO_GO" >/dev/null
-  log "opened exp://127.0.0.1:$METRO_PORT"
+  log "opened exp://127.0.0.1:$METRO_PORT — waiting for the app…"
+  local start=$SECONDS
+  while (( SECONDS - start < 240 )); do
+    for dismiss in "text:Continue" "text:Got it"; do
+      local p; p="$(ui_find "$dismiss")"
+      # shellcheck disable=SC2086
+      [[ -n "$p" ]] && "${ADB[@]}" shell input tap $p && sleep 1
+    done
+    if [[ -n "$(ui_find id:sign-in-email)" || -n "$(ui_find id:app-header)" || -n "$(ui_find id:tab-bar)" || -n "$(ui_find text:AyahLoop)" ]]; then
+      log "app is up"
+      return 0
+    fi
+    sleep 2
+  done
+  die "the app did not appear within 240s — check $STATE/logs/metro.log and the phone"
+}
+
+cmd_sign_in() {
+  load_env
+  local email="${1:-learner@ayahloop.dev}" password="${2:-password123}"
+  if [[ -z "$(ui_find id:sign-in-email)" ]]; then
+    if [[ -n "$(ui_find id:header-sign-out)" ]]; then
+      log "already signed in — signing out first"
+      device_tap id:header-sign-out
+    fi
+    ui_wait id:sign-in-email 30 >/dev/null || die "sign-in screen not reachable"
+  fi
+  device_type id:sign-in-email "$email"
+  device_type id:sign-in-password "$password"
+  "${ADB[@]}" shell input keyevent KEYCODE_BACK
+  sleep 0.5
+  device_tap id:sign-in-submit
+  ui_wait id:tab-bar 60 >/dev/null || die "sign-in did not land in the app"
+  log "signed in as $email"
+}
+
+cmd_sign_out() {
+  load_env
+  device_tap id:header-sign-out
+  ui_wait id:sign-in-email 30 >/dev/null || die "did not return to sign-in"
 }
 
 cmd_screenshot() {
@@ -244,7 +335,7 @@ swipe() {
 
 main() {
   local sub="${1:-}"
-  [[ -n "$sub" ]] || { sed -n '2,18p' "${BASH_SOURCE[0]}"; exit 1; }
+  [[ -n "$sub" ]] || { sed -n '2,22p' "${BASH_SOURCE[0]}"; exit 1; }
   shift
   case "$sub" in
     up) cmd_up "$@" ;;
@@ -252,6 +343,8 @@ main() {
     down) cmd_down ;;
     with-device) [[ $# -gt 0 ]] || die "with-device needs a command"; locked "$@" ;;
     open) locked cmd_open ;;
+    sign-in) locked cmd_sign_in "$@" ;;
+    sign-out) locked cmd_sign_out ;;
     tap) load_env; locked device_tap "${1:?selector}" "${2:-20}" ;;
     type) load_env; locked device_type "${1:?selector}" "${2:?text}" ;;
     wait-for) load_env; locked ui_wait "${1:?selector}" "${2:-60}" >/dev/null ;;
