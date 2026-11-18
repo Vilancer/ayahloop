@@ -5,7 +5,7 @@ module.exports = {
   testTimeout: 30000,
   testMatch: ["**/__tests__/**/*.test.{ts,tsx}"],
   transformIgnorePatterns: [
-    "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|nativewind|react-native-css-interop|lucide-react-native|@ayahloop))",
+    "/node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|nativewind|react-native-css-interop|lucide-react-native|standard-navigation|@ayahloop))",
   ],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",

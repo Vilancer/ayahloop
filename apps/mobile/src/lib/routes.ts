@@ -9,4 +9,5 @@ export const routes = {
   reviews: "/reviews",
   progress: "/progress",
   curriculum: "/curriculum",
+  devGallery: "/dev/gallery",
 } as const;
