@@ -10,4 +10,5 @@ export const routes = {
   progress: "/progress",
   curriculum: "/curriculum",
   devGallery: "/dev/gallery",
+  devMushafTest: "/dev/mushaf-test",
 } as const;
