@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Build a LOCAL, git-ignored fixture for the dev Mushaf rendering test
 # (apps/mobile/src/app/dev/mushaf-test.tsx): one page's layout lines, word
-# glyph codes, Unicode words and that page's font, served by the web dev server.
+# glyph codes, Unicode words and that page's font. The files go to
+# apps/web/.dev-fixtures/ (git-ignored, outside public/), and only the web DEV
+# server serves them (apps/web/src/app/api/dev/fixtures); a production build
+# answers 404.
 #
 #   scripts/dev-mushaf-fixture.sh <downloads-dir> <page 1-604>
 #
@@ -17,7 +20,7 @@ PAGE="${2:?usage: dev-mushaf-fixture.sh <downloads-dir> <page>}"
 [[ "$PAGE" =~ ^[0-9]+$ ]] && (( PAGE >= 1 && PAGE <= 604 )) || { echo "page must be 1-604" >&2; exit 1; }
 
 REPO="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
-OUT="$REPO/apps/web/public/dev-fixtures/mushaf"
+OUT="$REPO/apps/web/.dev-fixtures/mushaf"
 LAYOUT="$SRC/qul-mushaf-layout-10/extracted/qpc-v2-15-lines.db"
 GLYPHS="$SRC/qul-quran-script-61/extracted/qpc-v2.db"
 UNICODE="$SRC/qul-quran-script-312/extracted/qpc-hafs-word-by-word.db"

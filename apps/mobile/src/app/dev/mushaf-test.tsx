@@ -1,7 +1,9 @@
 import { nativeFontNames } from "@ayahloop/design-tokens/nativewind";
 import * as Font from "expo-font";
+import { Unmatched } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, View, type LayoutChangeEvent } from "react-native";
+import { z } from "zod";
 import { splitMiddleLetter } from "@/components/mushaf";
 import { AppText, ErrorState, Screen, Skeleton, TopBar } from "@/components/ui";
 import { useLocale } from "@/providers/locale-provider";
@@ -11,20 +13,39 @@ import { useTheme } from "@/providers/theme-provider";
  * Development-only rendering test: draws one real Mushaf page from a LOCAL,
  * git-ignored fixture (scripts/dev-mushaf-fixture.sh) to check two things on a
  * device: the printed line layout with the per-page glyph font, and whether a
- * single letter can take its own colour. Nothing here ships content.
+ * single letter can take its own colour. Nothing here ships content. Outside a
+ * development build the route behaves as if it did not exist.
  */
 const PAGE = 3;
 const BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://127.0.0.1:3300";
-const FIXTURES = `${BASE}/dev-fixtures/mushaf`;
+/** Served only by the web dev server (apps/web/src/app/api/dev/fixtures). */
+const FIXTURES = `${BASE}/api/dev/fixtures/mushaf`;
 /** Glyph font size as a share of the line width, so a full printed line fits. */
 const GLYPH_SIZE_RATIO = 0.058;
 
-type FixtureWord = { id: number; surah: number; ayah: number; word: number; glyph: string; text: string };
-type FixtureLine = { line: number; type: string; centered: number; surah: number | string | null; words: FixtureWord[] };
-type Fixture = { page: number; fontFile: string; lines: FixtureLine[] };
+const FixtureSchema = z.object({
+  page: z.number().int(),
+  fontFile: z.string().regex(/^[\w.-]+\.ttf$/),
+  lines: z.array(
+    z.object({
+      line: z.number(),
+      type: z.string(),
+      centered: z.number(),
+      surah: z.union([z.number(), z.string(), z.null()]),
+      words: z.array(
+        z.object({ id: z.number(), surah: z.number(), ayah: z.number(), word: z.number(), glyph: z.string(), text: z.string() }),
+      ),
+    }),
+  ),
+});
+type Fixture = z.infer<typeof FixtureSchema>;
 type State = { status: "loading" } | { status: "error" } | { status: "ready"; fixture: Fixture; family: string };
 
-export default function MushafTest() {
+export default function MushafTestRoute() {
+  return __DEV__ ? <MushafTest /> : <Unmatched />;
+}
+
+function MushafTest() {
   const { t } = useLocale();
   const { color } = useTheme();
   const [state, setState] = useState<State>({ status: "loading" });
@@ -38,7 +59,7 @@ export default function MushafTest() {
       try {
         const response = await fetch(`${FIXTURES}/page-${PAGE}.json`);
         if (!response.ok) throw new Error(String(response.status));
-        const fixture = (await response.json()) as Fixture;
+        const fixture = FixtureSchema.parse(await response.json());
         const family = `qpc-v2-p${fixture.page}`;
         await Font.loadAsync({ [family]: { uri: `${FIXTURES}/${fixture.fontFile}` } });
         if (live) setState({ status: "ready", fixture, family });
