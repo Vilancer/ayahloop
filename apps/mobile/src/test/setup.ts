@@ -27,3 +27,8 @@ jest.mock("expo-haptics", () => ({
 jest.mock("react-native-reanimated", () =>
   jest.requireActual<object>("react-native-reanimated/mock"),
 );
+// lucide ships ESM-only .mjs that Jest does not transform; icons are decorative in tests.
+jest.mock("lucide-react-native", () => {
+  const icon = () => null;
+  return new Proxy({ __esModule: true }, { get: (target, name) => (name in target ? Reflect.get(target, name) : icon) });
+});
