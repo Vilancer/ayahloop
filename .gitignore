@@ -12,4 +12,6 @@ coverage/
 .env.*
 !.env.example
 apps/mobile/expo-env.d.ts
+# local Mushaf rendering fixtures (upstream text and fonts; never committed)
+apps/web/public/dev-fixtures/
 *.tsbuildinfo
