@@ -9,12 +9,3 @@ allowBuilds:
   '@swc/core': true
 minimumReleaseAgeExclude:
   - lucide-react@1.38.0
-  - '@expo/cli@57.0.23'
-  - '@expo/metro-file-map@57.0.3'
-  - '@expo/ui@57.0.17'
-  - babel-preset-expo@57.0.11
-  - expo-glass-effect@57.0.2 || 57.0.4
-  - expo-modules-core@57.0.17
-  - expo-modules-jsi@57.1.0
-  - expo-router@57.0.20
-  - expo@57.0.21

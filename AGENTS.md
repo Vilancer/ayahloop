@@ -4,7 +4,7 @@
 
 ## Status
 
-**Setup / foundation.** A pnpm + Turborepo monorepo (`pnpm@11.10.0`, Node ≥ 22): `apps/mobile` (Expo SDK 57, Expo Router, NativeWind v4), `apps/web` (Next.js 16 App Router, Tailwind v4: web app + REST API), `packages/{shared,data-access,i18n,design-tokens}`, `supabase/` (migrations, rollbacks, seed), and `scripts/` (verification suites + shared-phone tooling). The canonical spine is in the outer repo at `.planning/00-spine.md`.
+**Setup / foundation.** A pnpm + Turborepo monorepo (`pnpm@11.10.0`, Node ≥ 22): `apps/mobile` (Expo SDK 58, Expo Router, NativeWind v4), `apps/web` (Next.js 16 App Router, Tailwind v4: web app + REST API), `packages/{shared,data-access,i18n,design-tokens}`, `supabase/` (migrations, rollbacks, seed), and `scripts/` (verification suites + shared-phone tooling). The canonical spine is in the outer repo at `.planning/00-spine.md`.
 
 ## Commands
 
@@ -47,7 +47,7 @@ From `.planning/00-spine.md`. Never use "chapter", "verse", "chunk", "lesson", "
 ## Architecture map
 
 ```
-apps/mobile/             Expo SDK 57 + Expo Router + NativeWind v4 — iOS & Android app
+apps/mobile/             Expo SDK 58 + Expo Router + NativeWind v4 — iOS & Android app
 apps/web/                Next.js 16 App Router + Tailwind v4 — web companion + REST API (/api/*)
 packages/shared/         @ayahloop/shared — zod contracts, enums, STEP_TRANSITIONS, PERMISSIONS, nav
 packages/design-tokens/  @ayahloop/design-tokens — pure token data → web-theme.css, tailwind-preset, nativewind-vars
