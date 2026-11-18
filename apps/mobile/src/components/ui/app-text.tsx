@@ -44,7 +44,14 @@ const MONO_WEIGHT: Record<NativeFontWeight, string> = {
 
 export type DigitsProps = Omit<AppTextProps, "children"> & { children: string | number };
 
-/** Counters, timers and ayah references: always Latin digits in a stable LTR run. */
+const LRM = "\u200E";
+
+/**
+ * Counters, timers and ayah references: always Latin digits in a stable LTR run.
+ * `writingDirection` only works on iOS, so the run is also wrapped in
+ * left-to-right marks, which keep "2 / 3" in order inside an RTL screen on Android.
+ */
+
 export function Digits({ size = "sm", weight = "regular", tone = "text-foreground", className, style, children, ...rest }: DigitsProps) {
   return (
     <Text
@@ -52,7 +59,7 @@ export function Digits({ size = "sm", weight = "regular", tone = "text-foregroun
       style={[{ fontFamily: MONO_WEIGHT[weight], writingDirection: "ltr" }, style]}
       {...rest}
     >
-      {latinDigits(String(children))}
+      {`${LRM}${latinDigits(String(children))}${LRM}`}
     </Text>
   );
 }

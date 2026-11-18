@@ -60,9 +60,9 @@ describe("UI primitives", () => {
     expect(onChange).toHaveBeenCalledWith("continuous");
   });
 
-  it("Digits always renders Latin digits", async () => {
+  it("Digits always renders Latin digits in a left-to-right run", async () => {
     await wrap(<Digits>{"٢ / ٣"}</Digits>);
-    expect(screen.getByText("2 / 3")).toBeTruthy();
+    expect(screen.getByText("\u200E2 / 3\u200E")).toBeTruthy();
   });
 });
 
