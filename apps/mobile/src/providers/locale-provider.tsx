@@ -1,4 +1,5 @@
 import { createT, localeDir, localeScript, type Locale, type TextDirection, type Translate } from "@ayahloop/i18n";
+import { LocaleProvider as RouterLocaleProvider } from "expo-router";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { View } from "react-native";
 
@@ -35,7 +36,10 @@ export function LocaleProvider({
   );
   return (
     <LocaleContext.Provider value={value}>
-      <View style={{ flex: 1, direction: value.dir }}>{children}</View>
+      {/* Yoga direction for layout, and Expo Router's direction context for navigation (headers, gestures). */}
+      <RouterLocaleProvider direction={value.dir}>
+        <View style={{ flex: 1, direction: value.dir }}>{children}</View>
+      </RouterLocaleProvider>
     </LocaleContext.Provider>
   );
 }

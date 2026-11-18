@@ -77,13 +77,16 @@ export function MushafPage({
         onPress={() => onPressWord?.(word)}
         className={`rounded-sm px-0.5 ${wash}`}
       >
+        {/* The word keeps its own width while covered, so hiding or revealing never moves the line. */}
+        <QuranText
+          fontSize={WORD_FONT_SIZE}
+          style={hidden ? { opacity: 0 } : ruleColor ? { color: ruleColor } : undefined}
+        >
+          {word.text}
+        </QuranText>
         {hidden ? (
-          <View testID={`mushaf-cover-${word.id}`} className="my-2 h-6 w-16 rounded-sm bg-secondary" />
-        ) : (
-          <QuranText fontSize={WORD_FONT_SIZE} style={ruleColor ? { color: ruleColor } : undefined}>
-            {word.text}
-          </QuranText>
-        )}
+          <View testID={`mushaf-cover-${word.id}`} className="absolute inset-x-0.5 inset-y-2 rounded-sm bg-secondary" />
+        ) : null}
       </Pressable>
     );
   };
@@ -118,6 +121,9 @@ export function MushafPage({
             <Pressable
               key={`${block.groupId}-${block.lines[0]?.id ?? ""}`}
               testID={`mushaf-group-${block.groupId}`}
+              // When words are tappable, keep each word its own accessibility element
+              // (iOS would otherwise merge the whole group into one).
+              accessible={!onPressWord}
               accessibilityState={{ selected: current }}
               disabled={!onPressGroup || current}
               onPress={() => onPressGroup?.(block.groupId)}

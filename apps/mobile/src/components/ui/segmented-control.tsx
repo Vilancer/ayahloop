@@ -21,6 +21,8 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
             accessibilityLabel={option.label}
             accessibilityState={{ selected }}
             onPress={() => onChange(option.value)}
+            // The track's 4px padding is part of the 48px target.
+            hitSlop={{ top: 4, bottom: 4 }}
             className={[
               "flex-1 items-center justify-center rounded-md",
               selected ? "border border-border bg-card" : "",

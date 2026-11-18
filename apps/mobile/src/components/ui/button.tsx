@@ -1,4 +1,3 @@
-import * as Haptics from "expo-haptics";
 import type { LucideIcon } from "lucide-react-native";
 import { ActivityIndicator, Pressable, type PressableProps } from "react-native";
 import { useTheme, type ThemeColorName } from "@/providers/theme-provider";
@@ -56,10 +55,7 @@ export function Button({
       accessibilityLabel={label}
       accessibilityState={{ disabled: inactive, busy: loading }}
       disabled={inactive}
-      onPress={(event) => {
-        void Haptics.selectionAsync();
-        onPress?.(event);
-      }}
+      onPress={onPress}
       className={[
         "flex-row items-center justify-center gap-2 rounded-lg active:opacity-80",
         height === "primary" ? "h-primary" : "h-control",

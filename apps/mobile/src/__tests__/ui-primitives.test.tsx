@@ -1,5 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
+import { StyleSheet } from "react-native";
 import { buildPlaceholderPage, MushafPage } from "@/components/mushaf";
 import { Button, Chip, Digits, SegmentedControl } from "@/components/ui";
 import { AppProviders } from "@/providers/app-providers";
@@ -23,6 +25,8 @@ describe("UI primitives", () => {
     const { rerender } = await wrap(<Button label="ابدأ التدريب" onPress={onPress} />);
     await fireEvent.press(screen.getByRole("button", { name: "ابدأ التدريب" }));
     expect(onPress).toHaveBeenCalledTimes(1);
+    // Haptics are kept for loop completion and step mastery, not every tap.
+    expect(Haptics.selectionAsync).not.toHaveBeenCalled();
     await rerender(
       <AppProviders initialLocale="ar">
         <Button label="ابدأ التدريب" onPress={onPress} disabled />
@@ -49,7 +53,10 @@ describe("UI primitives", () => {
         ]}
       />,
     );
-    await fireEvent.press(screen.getByRole("tab", { name: "استماع متصل" }));
+    const tab = screen.getByRole("tab", { name: "استماع متصل" });
+    // 40px option + the track's 4px padding on each side = the 48px touch target.
+    expect(tab.props.hitSlop).toMatchObject({ top: 4, bottom: 4 });
+    await fireEvent.press(tab);
     expect(onChange).toHaveBeenCalledWith("continuous");
   });
 
@@ -79,6 +86,19 @@ describe("MushafPage", () => {
     expect(screen.queryByTestId(`mushaf-cover-${hint.id}`)).toBeNull();
     for (const word of ayah2.slice(1)) expect(screen.getByTestId(`mushaf-cover-${word.id}`)).toBeTruthy();
     for (const word of ayah1) expect(screen.queryByTestId(`mushaf-cover-${word.id}`)).toBeNull();
+  });
+
+  it("keeps a covered word's own width so the line does not move", async () => {
+    const covered = ayah2[1];
+    if (!covered) throw new Error("fixture has no second ayah 2 word");
+    await wrap(<MushafPage page={page} currentGroupId="a" hiddenAyahs={[2]} />);
+    const text = within(screen.getByTestId(`mushaf-word-${covered.id}`)).getByText(covered.text);
+    expect(StyleSheet.flatten(text.props.style)).toMatchObject({ opacity: 0 });
+  });
+
+  it("keeps each word its own accessibility element when words are tappable", async () => {
+    await wrap(<MushafPage page={page} currentGroupId="a" onPressGroup={jest.fn()} onPressWord={jest.fn()} />);
+    expect(screen.getByTestId("mushaf-group-b").props.accessible).toBe(false);
   });
 
   it("lets the learner open another group or a word without any condition", async () => {
